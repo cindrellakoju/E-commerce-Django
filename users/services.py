@@ -52,7 +52,7 @@ def verify_token(view_func):
             return view_func(request, *args, **kwargs)
     return _wrapped_view
 
-def role_required(role):
+def role_required(*allowed_role):
     def decorator(view_func):
         @wraps(view_func)
         def _wrapped_view(request,*args,**kwargs):
@@ -65,8 +65,8 @@ def role_required(role):
             except Users.DoesNotExist:
                 return JsonResponse({"error":"User doesnot exist"},status = 404)
             
-            if user.roles != role:
-                return JsonResponse({"error":f"{role.capitalize()} access required"},status = 403)
+            if user.roles not in allowed_role:
+                return JsonResponse({"error":"Access denied.No required role "},status = 403)
             return view_func(request,*args,**kwargs)
         return _wrapped_view
     return decorator
