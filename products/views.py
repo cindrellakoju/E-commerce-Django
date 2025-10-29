@@ -4,10 +4,10 @@ from django.http import JsonResponse
 from users.services import verify_token,role_required,verify_user
 from django.views.decorators.csrf  import csrf_exempt
 from django.utils.text import slugify
-from users.models import Users
 from products.services import pagination
 from django.db.models import Q
 import uuid
+from products.services import verify_product
 # Create your views here.
 @csrf_exempt
 @verify_token
@@ -130,11 +130,7 @@ def create_product(request):
             price = data.get('price')
             stock = data.get('stock')
 
-            try:
-                seller = Users.objects.get(id=user_id)
-            except Users.DoesNotExist:
-                return JsonResponse({'error':'Seller not found'},status=404)
-            
+            seller = verify_user(user_id=user_id)
             try:
                 category = ProductCategory.objects.get(id=category_id)
             except ProductCategory.DoesNotExist:
@@ -314,10 +310,8 @@ def create_product_review(request):
             return JsonResponse({'error':'Failed to decode JSON'},status = 400)
         
         user = verify_user(user_id)
-        try:
-            product = Products.objects.get(id=product_id)
-        except Products.DoesNotExist:
-            return JsonResponse({'error':'Product not found'},status = 404)
+        product = verify_product(product_id=product_id)
+
         review = ProductReview.objects.create(
             reviewer = user,
             product = product,
@@ -367,6 +361,7 @@ def retrieve_product_review(request,product_id):
         data = []
         for product_review in review:
             data.append({
+                "id" : str(product_review.id),
                 "reviewer" : product_review.reviewer.username,
                 "review_msg":product_review.review_msg,
                 "review_star":product_review.review_star

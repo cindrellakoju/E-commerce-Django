@@ -1,5 +1,6 @@
 from django.core.paginator import Paginator,EmptyPage
 from django.http import JsonResponse
+from products.models import Products
 
 def pagination(page_number,page_size,products):
     paginator=Paginator(products,page_size)
@@ -12,6 +13,7 @@ def pagination(page_number,page_size,products):
     data = []
     for product in paginate_product:
         data.append({
+            'id':str(product.id),
             'seller' : str(product.seller),
             'category' : str(product.category),
             'name':product.name,
@@ -26,3 +28,10 @@ def pagination(page_number,page_size,products):
         'total_products': paginator.count,
         'products': data
     }, status=200)
+
+def verify_product(product_id):
+        try:
+            product = Products.objects.get(id=product_id)
+        except Products.DoesNotExist:
+            return JsonResponse({'error':'Product not found'},status = 404)
+        return product
