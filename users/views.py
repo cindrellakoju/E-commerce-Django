@@ -76,7 +76,7 @@ def login_view(request):
             user.last_login = datetime.datetime.utcnow()
             user.save()
             # token = 'rerer'
-            token = generate_jwt(user.id,email)
+            token = generate_jwt(user.id,email,user.roles)
             return JsonResponse({"message":"Login successful","token_type" : "Bearer","token" : token})
         else:
             return JsonResponse({"error":"Invalid email or password"},status = 401)

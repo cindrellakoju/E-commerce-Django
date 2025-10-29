@@ -1,7 +1,6 @@
 import subprocess
 import sys
 import time
-import signal
 
 def is_docker_running():
     """Check if Docker is running by running 'docker info'."""

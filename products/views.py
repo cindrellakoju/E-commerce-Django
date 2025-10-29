@@ -1,12 +1,13 @@
-from products.models import ProductCategory, Products, ProductImage
+from products.models import ProductCategory, Products, ProductImage, ProductReview
 import json
 from django.http import JsonResponse
-from users.services import verify_token,role_required
+from users.services import verify_token,role_required,verify_user
 from django.views.decorators.csrf  import csrf_exempt
 from django.utils.text import slugify
 from users.models import Users
 from products.services import pagination
 from django.db.models import Q
+import uuid
 # Create your views here.
 @csrf_exempt
 @verify_token
@@ -122,7 +123,6 @@ def create_product(request):
     if request.method == "POST":
         try:
             user_id = request.user_id
-            print("Logged user:",user_id)
             data = json.loads(request.body)
             category_id = data.get('category')
             name = data.get('name')
@@ -299,3 +299,96 @@ def search_engine(request):
         return pagination(page_number=page_number,page_size=page_size,products=results)
     return JsonResponse({'error':"Invalid method"},status = 405)
 
+@csrf_exempt
+@verify_token
+@role_required('customer') 
+def create_product_review(request):
+    if request.method == "POST":
+        try:
+            data = json.loads(request.body)
+            user_id = request.user_id
+            product_id= data.get("product")
+            review_msg = data.get("review_msg")
+            review_star = data.get("review_star")
+        except json.JSONDecodeError:
+            return JsonResponse({'error':'Failed to decode JSON'},status = 400)
+        
+        user = verify_user(user_id)
+        try:
+            product = Products.objects.get(id=product_id)
+        except Products.DoesNotExist:
+            return JsonResponse({'error':'Product not found'},status = 404)
+        review = ProductReview.objects.create(
+            reviewer = user,
+            product = product,
+            review_msg = review_msg,
+            review_star = review_star
+        )
+
+        return JsonResponse({'message':'Review Added successfully','review_id':review.id})
+    return JsonResponse({'error':"Invalid method"},status = 405)
+
+@csrf_exempt
+@verify_token
+@role_required('customer') 
+def edit_product_review(request,review_id):
+    if request.method in ["PUT","PATCH"]:
+        try:
+            data = json.loads(request.body)
+            user_id = request.user_id
+            review_msg = data.get("review_msg")
+            review_star = data.get("review_star")
+            review = ProductReview.objects.get(id=review_id)
+        except ProductReview.DoesNotExist:
+            return JsonResponse({'error':'Product Review doesnot exist'},status = 404)
+
+        if review.reviewer.id != uuid.UUID(user_id):
+            return JsonResponse({'error': 'You are not allowed to edit this review'}, status=403)
+        
+        if review_msg:
+            review.review_msg = review_msg
+
+        if review_star:
+            review.review_star = review_star
+
+        review.save()
+        return JsonResponse({'message':'Review Updated successfully'})
+    return JsonResponse({'error':"Invalid method"},status = 405)
+
+@csrf_exempt
+@verify_token
+def retrieve_product_review(request,product_id):
+    if request.method == "GET":
+        try:
+            review = ProductReview.objects.filter(product = product_id).order_by('review_star')
+        except ProductReview.DoesNotExist:
+            return JsonResponse({'error':'Product Review doesnot exist'},status = 404)
+        
+        data = []
+        for product_review in review:
+            data.append({
+                "reviewer" : product_review.reviewer.username,
+                "review_msg":product_review.review_msg,
+                "review_star":product_review.review_star
+            })
+        return JsonResponse({"Product Review":data})
+    return JsonResponse({'error':"Invalid method"},status = 405)
+
+@csrf_exempt
+@verify_token
+@role_required('customer','admin') 
+def delete_product_review(request,review_id):
+    if request.method == "DELETE":
+        try:
+            user_id = request.user_id
+            role = request.role
+            review = ProductReview.objects.get(id=review_id)
+        except ProductReview.DoesNotExist:
+            return JsonResponse({'error':'Product Review doesnot exist'},status = 404)
+
+        if review.reviewer.id != uuid.UUID(user_id) and role != 'admin':
+            return JsonResponse({'error': 'You are not allowed to edit this review'}, status=403)
+        
+        review.delete()
+        return JsonResponse({"message":"Review deleted successfully"})
+    return JsonResponse({'error':"Invalid method"},status = 405)

@@ -11,5 +11,9 @@ urlpatterns = [
     path('',views.retrieve_product,name='retrieve product'),
     path('image/add',views.add_image,name='add image'),
     path('image/delete/<uuid:image_id>',views.delete_image,name='delete image'),
-    path('search',views.search_engine,name="search product")
+    path('search',views.search_engine,name="search product"),
+    path('review/create',views.create_product_review,name='create product review'),
+    path('review/edit/<uuid:review_id>',views.edit_product_review,name='edit product review'),
+    path('review/delete/<uuid:review_id>',views.delete_product_review,name='delete product review'),
+    path('review/<uuid:product_id>',views.retrieve_product_review,name='retrieve product review'),
 ]

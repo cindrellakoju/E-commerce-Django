@@ -52,7 +52,7 @@ class ProductReview(BaseModel):
     product = models.ForeignKey(Products, on_delete=models.CASCADE, related_name="reviews")
     review_msg = models.CharField(max_length=500, null=True, blank=True)
     review_star = models.PositiveSmallIntegerField(
-        validators=[MinValueValidator(1), MaxValueValidator(5)]
+        validators=[MinValueValidator(1), MaxValueValidator(5)],null=True,blank=True
     )
 
     def __str__(self):
