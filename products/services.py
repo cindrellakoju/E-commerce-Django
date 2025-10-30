@@ -30,8 +30,8 @@ def pagination(page_number,page_size,products):
     }, status=200)
 
 def verify_product(product_id):
-        try:
-            product = Products.objects.get(id=product_id)
-        except Products.DoesNotExist:
-            return JsonResponse({'error':'Product not found'},status = 404)
-        return product
+    try:
+        product = Products.objects.get(id=product_id)
+    except Products.DoesNotExist:
+        return JsonResponse({'error':'Product not found'},status = 404)
+    return product
