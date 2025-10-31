@@ -131,6 +131,8 @@ def create_product(request):
             stock = data.get('stock')
 
             seller = verify_user(user_id=user_id)
+            if isinstance(seller, JsonResponse):
+                return seller
             try:
                 category = ProductCategory.objects.get(id=category_id)
             except ProductCategory.DoesNotExist:
@@ -310,8 +312,11 @@ def create_product_review(request):
             return JsonResponse({'error':'Failed to decode JSON'},status = 400)
         
         user = verify_user(user_id)
+        if isinstance(user, JsonResponse):
+            return user
         product = verify_product(product_id=product_id)
-
+        if isinstance(product, JsonResponse):
+            return product
         review = ProductReview.objects.create(
             reviewer = user,
             product = product,

@@ -63,6 +63,8 @@ def edit_order(request, order_id):
     user_id = request.user_id
     role = request.role
     order = verify_order(order_id=order_id)
+    if isinstance(order, JsonResponse):
+        return order
 
     if order.user.id != uuid.UUID(user_id) and role != 'admin':
         return JsonResponse({'error': 'You are not allowed to edit this order'}, status=403)
@@ -84,6 +86,7 @@ def edit_order(request, order_id):
         if order_status == 'canceled':
             order.order_status = order_status
             order.payment_status = 'canceled' if order.payment_method == 'cod' else 'refunded'
+            # NEed to add logic for refund after adding admin or seller
         else:
             order.order_status = order_status
 
@@ -147,6 +150,8 @@ def delete_order(request,order_id):
     user_id = request.user_id
     role = request.role
     order = verify_order(order_id=order_id)
+    if isinstance(order, JsonResponse):
+        return order
     
     if order.user.id != uuid.UUID(user_id) and role != 'admin':
         return JsonResponse({'error': 'You are not allowed to edit this review'}, status=403)
@@ -174,7 +179,11 @@ def insert_order_item(request):
     subtotal = quantity * price
 
     order = verify_order(order_id=order_id)
+    if isinstance(order, JsonResponse):
+        return order
     product = verify_product(product_id=product_id)
+    if isinstance(product, JsonResponse):
+        return product
     if product.stock < quantity:
         return JsonResponse({'message': f'Only {product.stock} items left for {product.name}'}, status=400)
 

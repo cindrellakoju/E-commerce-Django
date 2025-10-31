@@ -25,7 +25,11 @@ def create_cart(request):
         return JsonResponse({"error": "Invalid or missing data"}, status=400)
     
     user = verify_user(user_id=user_id)
+    if isinstance(user, JsonResponse):
+        return user
     product = verify_product(product_id=product_id)
+    if isinstance(product, JsonResponse):
+        return product
     with transaction.atomic():
         # Check if item already exists in cart
         cart_item = Cart.objects.filter(user=user, product=product).first()
@@ -71,6 +75,8 @@ def edit_cart(request,cart_id):
         return JsonResponse({"error":"Failed to load json"},status = 400)
     
     cart_item = verify_cart_item(cart_id=cart_id)
+    if isinstance(cart_item, JsonResponse):
+        return cart_item
     if cart_item.user.id != uuid.UUID(user_id):
         return JsonResponse({'error': 'You are not allowed to edit this cart'}, status=403)
     
@@ -89,6 +95,8 @@ def retrieve_cart(request):
         return JsonResponse({"error":"Invalid method"},status = 405)
     user_id = request.user_id
     user = verify_user(user_id=user_id)
+    if isinstance(user, JsonResponse):
+        return user
     try:
         cart_item = Cart.objects.filter(user = user)
     except Cart.DoesNotExist:
@@ -114,6 +122,8 @@ def delete_cart(request,cart_id):
     
     user_id = request.user_id    
     cart_item = verify_cart_item(cart_id=cart_id)
+    if isinstance(cart_item, JsonResponse):
+        return cart_item
     if cart_item.user.id != uuid.UUID(user_id):
         return JsonResponse({'error': 'You are not allowed to delete this cart'}, status=403)
 
@@ -134,7 +144,11 @@ def create_wishlist(request):
         return JsonResponse({"error":"Failed to load json"},status = 400)
     
     user = verify_user(user_id=user_id)
+    if isinstance(user, JsonResponse):
+        return user
     product = verify_product(product_id=product_id)
+    if isinstance(product, JsonResponse):
+        return product
 
     try:
         wishlist = Wishlist.objects.create(user=user, product=product)
@@ -156,6 +170,8 @@ def retrieve_wishlist(request):
         return JsonResponse({"error":"Invalid method"},status = 404)
     user_id = request.user_id
     user = verify_user(user_id=user_id)
+    if isinstance(user, JsonResponse):
+        return user
     try:
         wishlist_item = Wishlist.objects.filter(user=user)
     except Wishlist.DoesNotExist:
