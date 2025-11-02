@@ -17,6 +17,13 @@ class UsersManager(BaseUserManager):
         extra_fields.setdefault("is_superuser", True)
         return self.create_user(username, email, password, **extra_fields)
     
+    def get_by_natural_key(self, email):
+        """
+        Needed for Django's authenticate() function to work
+        when USERNAME_FIELD is 'email'.
+        """
+        return self.get(email=email)
+    
 class BaseModel(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4,editable=False)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -40,6 +47,8 @@ class Users(AbstractBaseUser, PermissionsMixin, BaseModel):
     roles = models.CharField(choices=UserRoles.choices,default=UserRoles.CUSTOMER)
     is_staff = models.BooleanField(default=False)
     is_active = models.BooleanField(default=True)
+
+    objects = UsersManager()  # ← custom manager
 
     USERNAME_FIELD = 'email'
     REQUIRED_FIELDS = ['username']
