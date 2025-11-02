@@ -32,13 +32,15 @@ def stop_docker_compose():
     except subprocess.CalledProcessError:
         print("Failed to stop Docker Compose services.")
 
-def run_django_server():
-    """Run Django development server."""
+def run_uvicorn_server():
+    """Run Django ASGI server with Uvicorn."""
     try:
-        print("Starting Django development server...")
-        subprocess.run([sys.executable, "manage.py", "runserver"])
+        print("Starting Django ASGI server with Uvicorn...")
+        subprocess.run([
+            sys.executable, "-m", "uvicorn", "ecommerce.asgi:application", "--reload", "--host", "127.0.0.1", "--port", "8000"
+        ])
     except subprocess.CalledProcessError:
-        print("Failed to start Django server")
+        print("Failed to start Uvicorn server")
         stop_docker_compose()
         sys.exit(1)
 
@@ -51,7 +53,7 @@ if __name__ == "__main__":
     time.sleep(5)  # Give containers a few seconds to start
 
     try:
-        run_django_server()
+        run_uvicorn_server()
     except KeyboardInterrupt:
         # Catch Ctrl+C and stop Docker containers
         stop_docker_compose()

@@ -44,7 +44,9 @@ INSTALLED_APPS = [
     'products',
     'cart_wishlist',
     'orders',
-    'payments'
+    'payments',
+    'chat',
+    'channels'
 ]
 
 MIDDLEWARE = [
@@ -130,3 +132,4 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 AUTH_USER_MODEL = 'users.Users'
 LOGIN_URL = 'users/login/'
+ASGI_APPLICATION = 'ecommerce.asgi.application'
