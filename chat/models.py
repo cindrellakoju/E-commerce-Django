@@ -45,3 +45,5 @@ class Message(BaseModel):
     def __str__(self):
         content_preview = self.message_text[:20] + '...' if self.message_text else "Photo"
         return f"Message from {self.sender.username} to {self.receiver.username}: {content_preview}"
+
+# Group msg do personal project

@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>WebSocket Chat</title>
+</head>
+<body>
+    <h2>WebSocket Chat</h2>
+
+    <label for="group">Group Name:</label>
+    <input type="text" id="group" placeholder="Enter group name" />
+    <button id="connectBtn">Connect</button>
+
+    <div id="chat" style="margin-top: 20px; border: 1px solid #ccc; padding: 10px; height: 300px; overflow-y: scroll;">
+        <p><em>Chat messages will appear here...</em></p>
+    </div>
+
+    <input type="text" id="messageInput" placeholder="Type your message" />
+    <button id="sendBtn">Send</button>
+
+    <script>
+        let socket;
+
+        document.getElementById('connectBtn').onclick = function() {
+            const groupName = document.getElementById('group').value;
+            if (!groupName) {
+                alert("Enter a group name first!");
+                return;
+            }
+
+            // Connect to WebSocket using your URL pattern
+            socket = new WebSocket(`ws://${window.location.host}/ws/group/${groupName}/`);
+
+            socket.onopen = function() {
+                addMessage("Connected to WebSocket!");
+            };
+
+            socket.onmessage = function(event) {
+                const data = JSON.parse(event.data);
+                addMessage(data.message);
+            };
+
+            socket.onclose = function() {
+                addMessage("Disconnected from WebSocket.");
+            };
+        };
+
+        document.getElementById('sendBtn').onclick = function() {
+            const messageInput = document.getElementById('messageInput');
+            const message = messageInput.value;
+            if (!message) return;
+
+            socket.send(JSON.stringify({ 'message': message }));
+            messageInput.value = '';
+        };
+
+        function addMessage(message) {
+            const chat = document.getElementById('chat');
+            const p = document.createElement('p');
+            p.textContent = message;
+            chat.appendChild(p);
+            chat.scrollTop = chat.scrollHeight;
+        }
+    </script>
+</body>
+</html>
