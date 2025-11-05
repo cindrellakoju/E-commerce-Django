@@ -6,7 +6,7 @@
 <body>
     <h2>WebSocket Chat</h2>
 
-    <label for="group">Group Name:</label>
+    <label for="group">User Id:</label>
     <input type="text" id="group" placeholder="Enter group name" />
     <button id="connectBtn">Connect</button>
 
@@ -28,7 +28,7 @@
             }
 
             // Connect to WebSocket using your URL pattern
-            socket = new WebSocket(`ws://${window.location.host}/ws/group/${groupName}/`);
+            socket = new WebSocket(`ws://${window.location.host}/ws/chat/${groupName}/`);
 
             socket.onopen = function() {
                 addMessage("Connected to WebSocket!");
@@ -36,6 +36,7 @@
 
             socket.onmessage = function(event) {
                 const data = JSON.parse(event.data);
+                console.log(event.data)
                 addMessage(data.message);
             };
 

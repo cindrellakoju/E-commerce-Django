@@ -6,6 +6,7 @@ from dotenv import load_dotenv
 from functools import wraps
 from django.http import JsonResponse
 from users.models import Users
+from channels.db import database_sync_to_async
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 print(BASE_DIR)
@@ -73,6 +74,7 @@ def role_required(*allowed_role):
         return _wrapped_view
     return decorator
 
+@database_sync_to_async
 def verify_user(user_id):
     try:
         user = Users.objects.get(id=user_id)

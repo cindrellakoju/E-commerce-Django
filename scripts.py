@@ -1,6 +1,9 @@
 import subprocess
 import sys
 import time
+import os
+
+os.environ.setdefault("DJANGO_SETTINGS_MODULE", "ecommerce.settings")
 
 def is_docker_running():
     """Check if Docker is running by running 'docker info'."""
