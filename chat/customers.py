@@ -34,9 +34,9 @@ class ChatCustomer(AsyncWebsocketConsumer):
         r = get_redis_connection("default")
         r.sadd("online_users",str(self.user.id))
 
-        await self.send(text_data=json.dumps({
-            'message': 'Connected to WebSocket'
-        }))
+        from chat.services import get_message_history
+        message_history = await get_message_history(self.conversation)
+        await self.send(text_data=json.dumps(message_history))
 
     async def disconnect(self, close_code):
         # Remove the user from redis when disconnected to indicate user is offline
@@ -62,7 +62,7 @@ class ChatCustomer(AsyncWebsocketConsumer):
         # Checking wheather the receiver is online or not if online msg status will be delivered
         # Check with the help of redis as online user is stored in redis
         user_online_info = await user_online(str(self.user.id))
-        if user_online_info == 1:   # ✅ use == instead of is
+        if user_online_info == 1:
             status = "delivered"
         else:
             status = "sent"

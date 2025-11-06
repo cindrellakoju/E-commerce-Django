@@ -36,8 +36,11 @@
 
             socket.onmessage = function(event) {
                 const data = JSON.parse(event.data);
-                console.log(event.data)
-                addMessage(data.message);
+                console.log(data)
+                for (const msg of data){
+                    message = `${msg.sender} : ${msg.message_text}\t${msg.timestamp}`
+                    addMessage(message);
+                }
             };
 
             socket.onclose = function() {
