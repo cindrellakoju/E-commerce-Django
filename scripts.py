@@ -40,8 +40,16 @@ def run_uvicorn_server():
     try:
         print("Starting Django ASGI server with Uvicorn...")
         subprocess.run([
-            sys.executable, "-m", "uvicorn", "ecommerce.asgi:application", "--reload", "--host", "127.0.0.1", "--port", "8000"
+            sys.executable, "-m", "uvicorn", "ecommerce.asgi:application", "--reload", "--host", "0.0.0.0", "--port", "8000"
         ])
+        # subprocess.run([
+        #     sys.executable, "-m", "uvicorn", "ecommerce.asgi:application",
+        #     "--reload",
+        #     "--host", "0.0.0.0",
+        #     "--port", "8000",
+        #     "--ssl-keyfile", "key.pem",
+        #     "--ssl-certfile", "cert.pem",
+        # ])
     except subprocess.CalledProcessError:
         print("Failed to start Uvicorn server")
         stop_docker_compose()

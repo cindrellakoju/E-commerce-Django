@@ -24,5 +24,6 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('order/',include('orders.urls')),
     path('payments/',include('payments.urls')),
-    path('chat/', include('chat.urls'))
+    path('chat/', include('chat.urls')),
+    path('videocall/',include('videocall.urls'))
 ]

@@ -28,7 +28,7 @@ SECRET_KEY = 'django-insecure-6n_8*1pj+ins_@xq+hdl)-_1p1nmr*$0q1y_9xc7@g9c!j%xt#
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['localhost', '127.0.0.1', '192.168.18.108','1e539b1a0ba7.ngrok-free.app']
 
 
 # Application definition
@@ -40,7 +40,10 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    # Channels to support websocket
     'channels',
+    # ssl for https
+    'sslserver',
     'users',
     'products',
     'cart_wishlist',

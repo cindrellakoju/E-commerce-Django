@@ -36,13 +36,18 @@
 
             socket.onmessage = function(event) {
                 const data = JSON.parse(event.data);
-                console.log(data)
-                for (const msg of data){
-                    message = `${msg.sender} : ${msg.message_text}\t${msg.timestamp}`
+
+                // If the server sends an array, it's probably the message history
+                if (Array.isArray(data)) {
+                    for (const msg of data) {
+                        const message = `${msg.sender} : ${msg.message_text}\t${msg.timestamp}`;
+                        addMessage(message);
+                    }
+                } else if (data.message) {
+                    const message = `${data.sender} : ${data.message} \t ${data.timestamp || ''}`;
                     addMessage(message);
                 }
             };
-
             socket.onclose = function() {
                 addMessage("Disconnected from WebSocket.");
             };
