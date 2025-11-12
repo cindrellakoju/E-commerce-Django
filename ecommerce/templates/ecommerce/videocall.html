@@ -1,284 +1,3 @@
-<!-- <!DOCTYPE html>
-<html>
-<head>
-  <title>Directed WebRTC Call</title>
-</head>
-<body>
-  <h2>WebRTC Video Chat</h2>
-  
-  <label>Your Name: <input type="text" id="username"></label>
-  <br>
-  <label>Call User: <input type="text" id="callee"></label>
-  <br>
-  
-  <video id="localVideo" autoplay playsinline muted></video>
-  <video id="remoteVideo" autoplay playsinline></video>
-  <br>
-  
-  <button id="registerBtn">Register</button>
-  <button id="startCallBtn" style="display:none;">Start Call</button>
-  <button id="answerCallBtn" style="display:none;">Answer</button>
-
-  <script>
-    const socket = new WebSocket("wss://dd29e2928b74.ngrok-free.app//ws/signaling/");
-    const peer = new RTCPeerConnection({
-      iceServers: [{ urls: "stun:stun.l.google.com:19302" }]
-    });
-
-    const usernameInput = document.getElementById("username");
-    const calleeInput = document.getElementById("callee");
-    const registerBtn = document.getElementById("registerBtn");
-    const startCallBtn = document.getElementById("startCallBtn");
-    const answerCallBtn = document.getElementById("answerCallBtn");
-
-    const localVideo = document.getElementById("localVideo");
-    const remoteVideo = document.getElementById("remoteVideo");
-
-    let username = null;
-    let localStream = null;
-    let remoteOffer = null;
-    let callerName = null;
-
-    // Capture local video/audio
-    navigator.mediaDevices.getUserMedia({ video: true, audio: true })
-      .then(stream => {
-        localVideo.srcObject = stream;
-        localStream = stream;
-        stream.getTracks().forEach(track => peer.addTrack(track, stream));
-      });
-
-    // Remote video
-    peer.ontrack = event => {
-      remoteVideo.srcObject = event.streams[0];
-    };
-
-    // ICE candidates
-    peer.onicecandidate = event => {
-      if (event.candidate) {
-        socket.send(JSON.stringify({
-          type: "ice",
-          candidate: event.candidate,
-          target: callerName || calleeInput.value
-        }));
-      }
-    };
-
-    // Register user
-    registerBtn.onclick = () => {
-      username = usernameInput.value.trim();
-      if (!username) return alert("Enter your name");
-      socket.send(JSON.stringify({ type: "register", name: username }));
-      registerBtn.style.display = "none";
-      startCallBtn.style.display = "inline";
-    };
-
-    // Handle signaling messages
-    socket.onmessage = async event => {
-      const data = JSON.parse(event.data);
-
-      if (data.type === "offer" && data.target === username) {
-        // Incoming call for me
-        remoteOffer = data.offer;
-        callerName = data.caller;
-        answerCallBtn.style.display = "inline";
-        alert(`Incoming call from ${callerName}`);
-      } else if (data.type === "answer" && data.target === username) {
-        await peer.setRemoteDescription(new RTCSessionDescription(data.answer));
-      } else if (data.type === "ice" && data.target === username) {
-        await peer.addIceCandidate(new RTCIceCandidate(data.candidate));
-      }
-    };
-
-    // Start call
-    startCallBtn.onclick = async () => {
-      const callee = calleeInput.value.trim();
-      if (!callee) return alert("Enter the user to call");
-
-      const offer = await peer.createOffer();
-      await peer.setLocalDescription(offer);
-
-      socket.send(JSON.stringify({
-        type: "offer",
-        offer: offer,
-        caller: username,
-        target: callee
-      }));
-    };
-
-    // Answer call
-    answerCallBtn.onclick = async () => {
-      if (!remoteOffer) return;
-      await peer.setRemoteDescription(new RTCSessionDescription(remoteOffer));
-      const answer = await peer.createAnswer();
-      await peer.setLocalDescription(answer);
-
-      socket.send(JSON.stringify({
-        type: "answer",
-        answer: answer,
-        caller: callerName,
-        target: callerName
-      }));
-
-      answerCallBtn.style.display = "none";
-    };
-  </script>
-</body>
-</html> -->
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-<!-- <!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Video Call App</title>
-<style>
-body { font-family: Arial; display:flex; flex-direction:column; align-items:center; gap:10px; padding:20px; background:#f0f0f0; }
-input, button { padding:8px; font-size:16px; }
-video { width:400px; height:300px; background:black; object-fit:cover; border:2px solid #333; border-radius:5px; }
-#localVideo { transform: scaleX(-1); }
-#remoteVideo { transform:none; }
-</style>
-</head>
-<body>
-
-<input type="text" placeholder="Your user ID" id="userid">
-<input type="text" placeholder="Call user ID" id="calleeid">
-<button id="connectBtn">Connect</button>
-
-<div>
-  <button id="startCallBtn" style="display:none;">Start Call</button>
-  <button id="answerCallBtn" style="display:none;">Answer</button>
-</div>
-
-<video id="localVideo" autoplay playsinline muted></video>
-<video id="remoteVideo" autoplay playsinline></video>
-
-<script>
-const localVideo = document.getElementById("localVideo");
-const remoteVideo = document.getElementById("remoteVideo");
-const userIdInput = document.getElementById("userid");
-const calleeInput = document.getElementById("calleeid");
-const connectBtn = document.getElementById("connectBtn");
-const startCallBtn = document.getElementById("startCallBtn");
-const answerCallBtn = document.getElementById("answerCallBtn");
-
-let localStream = null;
-let peer = null;
-let socket = null;
-let remoteOffer = null;
-let callerId = null;
-
-// Get camera/mic
-async function startLocalStream() {
-    localStream = await navigator.mediaDevices.getUserMedia({ video:true, audio:true });
-    localVideo.srcObject = localStream;
-}
-
-// Connect WebSocket and show Start Call button
-connectBtn.onclick = async () => {
-    const userId = userIdInput.value.trim();
-    if (!userId) return alert("Enter your user ID");
-
-    socket = new WebSocket(`wss://YOUR_NGROK_URL/ws/signaling/${userId}/`);
-
-    socket.onopen = () => console.log("✅ WebSocket connected:", userId);
-    socket.onmessage = async (event) => {
-        const data = JSON.parse(event.data);
-        console.log("Received:", data);
-
-        if (data.type === "offer") {
-            remoteOffer = data.offer;
-            callerId = data.caller;
-            answerCallBtn.style.display = "inline";
-            alert(`Incoming call from ${callerId}`);
-        } else if (data.type === "answer") {
-            await peer.setRemoteDescription(new RTCSessionDescription(data.answer));
-        } else if (data.type === "ice") {
-            await peer.addIceCandidate(new RTCIceCandidate(data.candidate));
-        }
-    };
-
-    await startLocalStream();
-
-    peer = new RTCPeerConnection({ iceServers:[{urls:"stun:stun.l.google.com:19302"}] });
-
-    // Add local tracks
-    localStream.getTracks().forEach(track => peer.addTrack(track, localStream));
-
-    // Remote tracks
-    peer.ontrack = event => { remoteVideo.srcObject = event.streams[0]; };
-
-    // ICE candidates
-    peer.onicecandidate = event => {
-        if (event.candidate) {
-            socket.send(JSON.stringify({ type:"ice", candidate:event.candidate }));
-        }
-    };
-
-    startCallBtn.style.display = "inline";
-    alert("Connected! You can now start or answer a call.");
-};
-
-// Start call
-startCallBtn.onclick = async () => {
-    const callee = calleeInput.value.trim();
-    if (!callee) return alert("Enter the user to call");
-
-    const offer = await peer.createOffer();
-    await peer.setLocalDescription(offer);
-
-    socket.send(JSON.stringify({
-        type: "offer",
-        offer: offer,
-        caller: userIdInput.value.trim(),
-        target: callee
-    }));
-};
-
-// Answer call
-answerCallBtn.onclick = async () => {
-    if (!remoteOffer) return;
-
-    await peer.setRemoteDescription(new RTCSessionDescription(remoteOffer));
-    const answer = await peer.createAnswer();
-    await peer.setLocalDescription(answer);
-
-    socket.send(JSON.stringify({
-        type: "answer",
-        answer: answer,
-        caller: callerId,
-        target: callerId
-    }));
-
-    answerCallBtn.style.display = "none";
-};
-</script>
-
-</body>
-</html> -->
-
-
-
-
-
-
-
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -286,157 +5,247 @@ answerCallBtn.onclick = async () => {
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>WebRTC Video Call</title>
   <style>
-    video {
-      width: 45%;
-      margin: 5px;
-      border: 1px solid #ccc;
+    video { width: 45%; margin: 5px; border: 1px solid #ccc; }
+    .video-container { position: relative; display: inline-block; }
+    .icon {
+      position: absolute;
+      font-size: 24px;
+      background: rgba(0,0,0,0.5);
+      padding: 2px 5px;
+      border-radius: 5px;
+      display: none;
     }
-    button {
-      margin: 5px;
-    }
+    .mute { top: 10px; left: 10px; color: red; }
+    .video-off { top: 10px; right: 10px; color: yellow; }
   </style>
 </head>
 <body>
-  <h1>Video Call</h1>
-  <button id="startCallBtn">Start Call</button>
-  <button id="answerCallBtn" style="display:none;">Answer</button>
+  <h2>WebRTC Video Call</h2>
 
-  <div>
+  <input id="userId" type="text" placeholder="Enter your ID"/>
+  <button id="connectBtn">Connect</button>
+  <button id="callBtn">Call</button>
+  <button id="answerBtn" style="display:none;">Answer</button>
+  <button id="hangupBtn">Hang Up</button>
+  <button id="muteBtn">Mute</button>
+  <button id="videoBtn">Turn Off Video</button>
+  <br/><br/>
+
+  <div class="video-container">
     <video id="localVideo" autoplay playsinline muted></video>
+    <div id="localMuteIcon" class="icon mute">🔇</div>
+    <div id="localVideoOffIcon" class="icon video-off">📷❌</div>
+  </div>
+
+  <div class="video-container">
     <video id="remoteVideo" autoplay playsinline></video>
+    <div id="remoteMuteIcon" class="icon mute">🔇</div>
+    <div id="remoteVideoOffIcon" class="icon video-off">📷❌</div>
   </div>
 
   <script>
-  const NGROK_DOMAIN = "1e539b1a0ba7.ngrok-free.app";
-  const RECEIVER_ID = "{{ receiver_id }}"; // filled by server template
-  const username = "{{ request.user.username }}"; // filled by server template
+    const connectBtn = document.getElementById("connectBtn");
+    const callBtn = document.getElementById("callBtn");
+    const answerBtn = document.getElementById("answerBtn");
+    const hangupBtn = document.getElementById("hangupBtn");
+    const muteBtn = document.getElementById("muteBtn");
+    const videoBtn = document.getElementById("videoBtn");
 
-  const localVideo = document.getElementById("localVideo");
-  const remoteVideo = document.getElementById("remoteVideo");
-  const startCallBtn = document.getElementById("startCallBtn");
-  const answerCallBtn = document.getElementById("answerCallBtn");
+    const localVideo = document.getElementById("localVideo");
+    const remoteVideo = document.getElementById("remoteVideo");
+    const localMuteIcon = document.getElementById("localMuteIcon");
+    const remoteMuteIcon = document.getElementById("remoteMuteIcon");
+    const localVideoOffIcon = document.getElementById("localVideoOffIcon");
+    const remoteVideoOffIcon = document.getElementById("remoteVideoOffIcon");
 
-  let localStream = null;
-  let remoteOffer = null;
-  let remoteCandidatesQueue = [];
+    const username = "{{ request.user.username }}"; // from server template
 
-  const peer = new RTCPeerConnection({
-    iceServers: [{ urls: "stun:stun.l.google.com:19302" }]
-  });
+    let localStream;
+    let remoteStream;
+    let peerConnection;
+    let ws;
+    let didIOffer = false;
+    let incomingOffer = null;
+    let pendingCandidates = [];
+    let isMuted = false;
+    let videoOff = false;
 
-  const websocket = new WebSocket(`wss://${NGROK_DOMAIN}/ws/signaling/${RECEIVER_ID}/`);
+    const configuration = { iceServers: [{ urls: ['stun:stun.l.google.com:19302'] }] };
 
-  // Get camera and microphone
-  async function initMedia() {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-      localVideo.srcObject = stream;
-      localStream = stream;
+    // ---------------------- WebSocket Connect ----------------------
+    connectBtn.onclick = () => {
+      const userId = document.getElementById("userId").value;
+      if (!userId) return alert("Enter your user ID");
 
-      stream.getTracks().forEach(track => peer.addTrack(track, stream));
+      ws = new WebSocket(`wss://318a38a52164.ngrok-free.app/ws/signaling/?user_id=${userId}`);
 
-      startCallBtn.disabled = false; // enable start call button once media is ready
-    } catch (err) {
-      console.error("Failed to get media:", err);
-      alert("Cannot access camera or microphone.");
-    }
-  }
+      ws.onopen = () => console.log("WebSocket connected!");
 
-  initMedia();
+      ws.onmessage = async (e) => {
+        const data = JSON.parse(e.data);
 
-  // Show remote video
-  peer.ontrack = event => {
-    remoteVideo.srcObject = event.streams[0];
-  };
-
-  // Send ICE candidates
-  peer.onicecandidate = event => {
-    if (event.candidate) {
-      websocket.send(JSON.stringify({
-        type: "ice",
-        candidate: event.candidate,
-        target: RECEIVER_ID
-      }));
-    }
-  };
-
-  // Handle incoming WebSocket messages
-  websocket.onmessage = async (event) => {
-    const data = JSON.parse(event.data);
-
-    switch (data.type) {
-      case "offer":
-        // Only the receiver sees the incoming call
-        remoteOffer = data.offer;
-        answerCallBtn.style.display = "inline";
-        alert(`Incoming call from ${data.caller}`);
-        break;
-
-      case "answer":
-        await peer.setRemoteDescription(new RTCSessionDescription(data.answer));
-        // Apply any queued ICE candidates
-        for (const candidate of remoteCandidatesQueue) {
-          await peer.addIceCandidate(new RTCIceCandidate(candidate));
+        if (data.type === "offer") {
+          incomingOffer = data;
+          answerBtn.style.display = "inline";
         }
-        remoteCandidatesQueue = [];
-        break;
 
-      case "ice":
-        const candidate = new RTCIceCandidate(data.candidate);
-        if (peer.remoteDescription) {
-          try {
-            await peer.addIceCandidate(candidate);
-          } catch (err) {
-            console.error("ICE error:", err);
+        if (data.type === "answer") {
+          if (peerConnection) {
+            await peerConnection.setRemoteDescription(new RTCSessionDescription(data.answer));
+            await drainPendingCandidates();
           }
-        } else {
-          remoteCandidatesQueue.push(candidate);
         }
-        break;
 
-      case "receiver_status":
-        alert(data.message);
-        break;
+        if (data.type === "ice") {
+          const candidate = new RTCIceCandidate(data.candidate);
+          await handleIncomingIce(candidate);
+        }
 
-      default:
-        console.warn("Unknown message type:", data.type);
+        if (data.type === "mute") {
+          remoteMuteIcon.style.display = data.muted ? "block" : "none";
+        }
+
+        if (data.type === "video") {
+          remoteVideoOffIcon.style.display = data.off ? "block" : "none";
+        }
+
+        if (data.type === "hangup") {
+          alert(`${data.from} ended the call`);
+          stopMedia();
+          closeConnection();
+        }
+      };
+
+      ws.onclose = () => console.log("WebSocket disconnected");
+      ws.onerror = (err) => console.error("WebSocket error:", err);
+    };
+
+    // ---------------------- Media ----------------------
+    async function fetchUserMedia() {
+      localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+      localVideo.srcObject = localStream;
     }
-  };
 
-  // Start a call (caller)
-  startCallBtn.onclick = async () => {
-    if (!RECEIVER_ID) return alert("No receiver specified.");
+    function createPeerConnection() {
+      peerConnection = new RTCPeerConnection(configuration);
+      remoteStream = new MediaStream();
+      remoteVideo.srcObject = remoteStream;
 
-    const offer = await peer.createOffer();
-    await peer.setLocalDescription(offer);
+      localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
 
-    websocket.send(JSON.stringify({
-      type: "offer",
-      offer: offer,
-      caller: username,
-      target: RECEIVER_ID
-    }));
-  };
+      peerConnection.onicecandidate = (e) => {
+        if (e.candidate && ws && ws.readyState === WebSocket.OPEN) {
+          ws.send(JSON.stringify({ type: "ice", candidate: e.candidate, didIOffer }));
+        }
+      };
 
-  // Answer a call (receiver)
-  answerCallBtn.onclick = async () => {
-    if (!remoteOffer) return;
+      peerConnection.ontrack = (e) => {
+        e.streams[0].getTracks().forEach(track => remoteStream.addTrack(track));
+      };
+    }
 
-    await peer.setRemoteDescription(new RTCSessionDescription(remoteOffer));
-    const answer = await peer.createAnswer();
-    await peer.setLocalDescription(answer);
+    async function handleIncomingIce(candidate) {
+      if (peerConnection && peerConnection.remoteDescription && peerConnection.remoteDescription.type) {
+        try { await peerConnection.addIceCandidate(candidate); } 
+        catch (err) { console.error(err); }
+      } else {
+        pendingCandidates.push(candidate);
+      }
+    }
 
-    websocket.send(JSON.stringify({
-      type: "answer",
-      answer: answer,
-      target: RECEIVER_ID
-    }));
+    async function drainPendingCandidates() {
+      if (!peerConnection || !peerConnection.remoteDescription || !peerConnection.remoteDescription.type) return;
+      for (let candidate of pendingCandidates) {
+        try { await peerConnection.addIceCandidate(candidate); } 
+        catch(err) { console.error(err); }
+      }
+      pendingCandidates = [];
+    }
 
-    answerCallBtn.style.display = "none";
-  };
-  window.addEventListener("beforeunload", function () {
-      navigator.sendBeacon("{% url 'remove_online_user' %}");
-  });
+    // ---------------------- Call ----------------------
+    callBtn.onclick = async () => {
+      if (!ws || ws.readyState !== WebSocket.OPEN) return alert("Connect first!");
+      await fetchUserMedia();
+      createPeerConnection();
+
+      const offer = await peerConnection.createOffer();
+      await peerConnection.setLocalDescription(offer);
+      didIOffer = true;
+
+      ws.send(JSON.stringify({ type: "offer", offer, from: username }));
+    };
+
+    // ---------------------- Answer ----------------------
+    answerBtn.onclick = async () => {
+      if (!incomingOffer) return;
+
+      answerBtn.style.display = "none";
+      await fetchUserMedia();
+      createPeerConnection();
+
+      await peerConnection.setRemoteDescription(new RTCSessionDescription(incomingOffer.offer));
+      await drainPendingCandidates();
+
+      const answer = await peerConnection.createAnswer();
+      await peerConnection.setLocalDescription(answer);
+
+      ws.send(JSON.stringify({ type: "answer", answer, to: incomingOffer.from }));
+
+      didIOffer = false;
+      incomingOffer = null;
+    };
+
+    // ---------------------- Hang Up ----------------------
+    hangupBtn.onclick = () => {
+      stopMedia();
+      closeConnection();
+      if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({ type: "hangup", from: username }));
+      }
+    };
+
+    function stopMedia() {
+      if (localStream) localStream.getTracks().forEach(t => t.stop());
+      if (remoteStream) remoteStream.getTracks().forEach(t => t.stop());
+      localVideo.srcObject = null;
+      remoteVideo.srcObject = null;
+    }
+
+    function closeConnection() {
+      if (peerConnection) peerConnection.close();
+      peerConnection = null;
+      pendingCandidates = [];
+      incomingOffer = null;
+      didIOffer = false;
+    }
+
+    // ---------------------- Mute ----------------------
+    muteBtn.onclick = () => {
+      if (!localStream) return;
+
+      isMuted = !isMuted;
+      localStream.getAudioTracks().forEach(track => track.enabled = !isMuted);
+      localMuteIcon.style.display = isMuted ? "block" : "none";
+      muteBtn.textContent = isMuted ? "Unmute" : "Mute";
+
+      if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({ type: "mute", muted: isMuted, from: username }));
+      }
+    };
+
+    // ---------------------- Video On/Off ----------------------
+    videoBtn.onclick = () => {
+      if (!localStream) return;
+
+      videoOff = !videoOff;
+      localStream.getVideoTracks().forEach(track => track.enabled = !videoOff);
+      localVideoOffIcon.style.display = videoOff ? "block" : "none";
+      videoBtn.textContent = videoOff ? "Turn On Video" : "Turn Off Video";
+
+      if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({ type: "video", off: videoOff, from: username }));
+      }
+    };
   </script>
 </body>
 </html>
