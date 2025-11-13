@@ -8,6 +8,9 @@ from products.services import pagination
 from django.db.models import Q
 import uuid
 from products.services import verify_product
+from django.contrib.auth.decorators import login_required
+from django.shortcuts import render
+from django.http import HttpResponseNotAllowed
 # Create your views here.
 @csrf_exempt
 @verify_token
@@ -84,6 +87,7 @@ def edit_category(request, slug):
 
 @csrf_exempt
 @verify_token
+@login_required(login_url="users:login")
 def retrieve_category(request):
     categories = ProductCategory.objects.all()
     
@@ -193,7 +197,7 @@ def edit_product(request,slug):
     return JsonResponse({'error':"Invalid method"},status = 405)
 
 @csrf_exempt
-@verify_token
+@login_required(login_url="users:login")
 def retrieve_product(request):
     if request.method == "GET":
         try:
@@ -201,11 +205,25 @@ def retrieve_product(request):
         except Products.DoesNotExist:
             return JsonResponse({"error":"Product does not exist"},status = 404)
         
-        page_number = request.GET.get('page',1)
-        page_size = request.GET.get('size',5)
-        
-        return pagination(page_number=page_number,page_size=page_size,products=products)
+        page_number = int(request.GET.get('page', 1))
+        page_size = int(request.GET.get('size', 5))
 
+        
+        pagination_data = pagination(page_number=page_number, page_size=page_size, products=products)
+        page_number = pagination_data['page']
+        total_pages = pagination_data['total_pages']
+        total_product = pagination_data['total_products']
+        products = pagination_data['products']
+        context = {
+            'page_number': page_number,
+            'total_pages': total_pages,
+            'total_products': total_product,
+            'products': products
+        }
+
+        return render(request,"ecommerce/home_page.html",context=context)
+    # Handle non-GET requests
+    return HttpResponseNotAllowed(['GET'])
 
 @csrf_exempt
 @verify_token

@@ -8,7 +8,14 @@ def pagination(page_number,page_size,products):
     try:
         paginate_product = paginator.get_page(page_number)
     except EmptyPage:
-        return JsonResponse({'message':'No product remaining'},status = 200)
+        # return JsonResponse({'message':'No product remaining'},status = 200)
+        return {
+            'page': page_number,
+            'total_pages': 0,
+            'total_products': 0,
+            'products': []
+        }
+
     
     data = []
     for product in paginate_product:
@@ -22,12 +29,18 @@ def pagination(page_number,page_size,products):
             'price':product.price,
             'stock':product.stock
         })
-    return JsonResponse({
+    # return JsonResponse({
+    #     'page': paginate_product.number,
+    #     'total_pages': paginator.num_pages,
+    #     'total_products': paginator.count,
+    #     'products': data
+    # }, status=200)
+    return {
         'page': paginate_product.number,
         'total_pages': paginator.num_pages,
         'total_products': paginator.count,
         'products': data
-    }, status=200)
+    }
 
 def verify_product(product_id):
     try:
