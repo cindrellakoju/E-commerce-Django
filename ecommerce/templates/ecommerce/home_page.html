@@ -211,6 +211,7 @@
             const decBtn = product.querySelector('.decrement');
             const qtyDisplay = product.querySelector('.quantity');
             const cartBtn = product.querySelector('.cart-btn');
+            const wishlistBtn = product.querySelector('.wishlist-btn');
             const productId = product.dataset.id;
             const price = parseFloat(product.dataset.price);
 
@@ -249,6 +250,26 @@
                     alert("Failed to add to cart!");
                 });
             });
+
+            wishlistBtn.addEventListener('click', () => {
+                console.log("Clicked")
+                fetch("{% url 'create_wishlist' %}",{
+                    method : "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "X-CSRFToken": csrftoken
+                    },
+                    body: JSON.stringify({
+                        "product" : productId
+                    })
+                })
+                .then(res => res.json())
+                .then(data => alert(data.message))
+                .catch(err => {
+                    console.error(err)
+                    alert("Failed to add to Wishlist")
+                })
+            })
         });
     </script>
 </body>

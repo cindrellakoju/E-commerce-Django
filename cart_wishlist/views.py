@@ -140,20 +140,19 @@ def delete_cart(request,cart_id):
     cart_item.delete()
     return JsonResponse({'message':'Cart Item deleted successfully'})
 
-@csrf_exempt
-@verify_token
-@role_required('customer')
+@login_required(login_url="users:login")
+# @role_required('customer')
 def create_wishlist(request):
     if request.method != "POST":
         return JsonResponse({"error":"Invalid method"},status = 405)
     try:
         data = json.loads(request.body)
-        user_id = request.user_id
+        user_id = request.user.id
         product_id = data.get('product')
     except json.JSONDecodeError:
         return JsonResponse({"error":"Failed to load json"},status = 400)
     
-    user = verify_user(user_id=user_id)
+    user = async_to_sync(verify_user)(user_id=user_id)
     if isinstance(user, JsonResponse):
         return user
     product = verify_product(product_id=product_id)
@@ -173,13 +172,12 @@ def create_wishlist(request):
             'message': 'This product is already in your wishlist'
         }, status=200)
     
-@csrf_exempt
-@verify_token
+@login_required(login_url="users:login")
 def retrieve_wishlist(request):
     if request.method != "GET":
         return JsonResponse({"error":"Invalid method"},status = 404)
-    user_id = request.user_id
-    user = verify_user(user_id=user_id)
+    user_id = request.user.id
+    user = async_to_sync(verify_user)(user_id=user_id)
     if isinstance(user, JsonResponse):
         return user
     try:
@@ -191,27 +189,29 @@ def retrieve_wishlist(request):
     for item in wishlist_item:
         data.append({
             "id" : str(item.id),
-            'product' : item.product.name
+            'product' : item.product.name,
+            'price': item.product.price,
+            'stock' : item.product.stock
         })
-    return JsonResponse({'Wishlist item':data})
+    context = {
+        "wishlist_items" : data
+    }
+
+    return render(request,"ecommerce/wishlist_page.html",context=context)
+    # return JsonResponse({'Wishlist item':data})
     
     
-@csrf_exempt
-@verify_token
-@role_required('customer')
+@login_required(login_url="users:login")
+# @role_required('customer')
 def delete_wishlist(request,wishlist_id):
     if request.method != "DELETE":
         return JsonResponse({"error":"Invalid method"},status = 404)
-    user_id = request.user_id
+    user_id = request.user.id
     try:
         wishlist_item = Wishlist.objects.get(id=wishlist_id)
     except Wishlist.DoesNotExist:
         return JsonResponse({'error':'Wishlist doenot exist'},status = 404)
-    if wishlist_item.user.id != uuid.UUID(user_id):
+    if wishlist_item.user.id != user_id:
         return JsonResponse({'error': 'You are not allowed to delete this wishlist'}, status=403)
     wishlist_item.delete()
     return JsonResponse({'message':'Wishlist deleted successfully'},status = 404)
-    
-
-    
-
