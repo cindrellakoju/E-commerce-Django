@@ -141,23 +141,21 @@
     <div class="body">
         {% if products %}
             {% for product in products %}
-            <div class="product">
-                <!-- Example: you can use actual image URL if your model has one -->
-                <img src="https://via.placeholder.com/250x200.png?text={{ product.name|urlencode }}" alt="{{ product.name }}">
-                <h1>{{ product.name }}</h1>
-                <p>Price: {{ product.price }}</p>
-                <p>Stock: {{ product.stock }}</p>
+                <div class="product" data-id="{{ product.id }}" data-price="{{ product.price }}">
+                    <img src="https://via.placeholder.com/250x200.png?text={{ product.name|urlencode }}" alt="{{ product.name }}">
+                    <h1>{{ product.name }}</h1>
+                    <p>Price: {{ product.price }}</p>
+                    <p>Stock: {{ product.stock }}</p>
 
-                <div class="stock">
-                    <button class="decrement">-</button>
-                    <p class="quantity">1</p>
-                    <button class="increment">+</button>
+                    <div class="stock">
+                        <button class="decrement">-</button>
+                        <p class="quantity">1</p>
+                        <button class="increment">+</button>
+                    </div>
+                    <button class="cart-btn">Cart</button>
+                    <button class="wishlist-btn">Wishlist</button>
+                    <button class="buy-btn">Buy Now</button>
                 </div>
-
-                <button class="cart-btn">Cart</button>
-                <button class="wishlist-btn">Wishlist</button>
-                <button class="buy-btn">Buy Now</button>
-            </div>
             {% endfor %}
 
             <div class="pagination-info">
@@ -166,28 +164,90 @@
                 <p>Total Products: {{ total_products }}</p>
             </div>
 
+            <div class="pagination-controls" style="text-align:center; margin:20px;">
+                {% if page_number > 1 %}
+                    <a href="?page={{ page_number|add:'-1'}}&size=6"><button>Previous</button></a>
+                {% endif %}
+                {% if page_number < total_pages %}
+                    <a href="?page={{ page_number|add:'1'}}&size=6"><button>Next</button></a>
+                {% endif %}
+            </div>
         {% else %}
             <p>No products found.</p>
         {% endif %}
     </div>
 
-
     <script>
-        // Make stock increment/decrement work for multiple products
-        const products = document.querySelectorAll('.product');
+        // Set default size if not present
+        window.addEventListener('DOMContentLoaded', () => {
+            const urlParams = new URLSearchParams(window.location.search);
+            if (!urlParams.has('size')) {
+                urlParams.set('size', 6);
+                window.location.search = urlParams.toString();
+            }
+        });
 
+        // CSRF token helper for Django AJAX
+        function getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let cookie of cookies) {
+                    cookie = cookie.trim();
+                    if (cookie.startsWith(name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+        const csrftoken = getCookie('csrftoken');
+
+        // Product functionality
+        const products = document.querySelectorAll('.product');
         products.forEach(product => {
             const incBtn = product.querySelector('.increment');
             const decBtn = product.querySelector('.decrement');
-            const quantity = product.querySelector('.quantity');
+            const qtyDisplay = product.querySelector('.quantity');
+            const cartBtn = product.querySelector('.cart-btn');
+            const productId = product.dataset.id;
+            const price = parseFloat(product.dataset.price);
 
+            // Increment quantity
             incBtn.addEventListener('click', () => {
-                quantity.textContent = parseInt(quantity.textContent) + 1;
+                qtyDisplay.textContent = parseInt(qtyDisplay.textContent) + 1;
             });
 
+            // Decrement quantity
             decBtn.addEventListener('click', () => {
-                let current = parseInt(quantity.textContent);
-                if (current > 1) quantity.textContent = current - 1;
+                let current = parseInt(qtyDisplay.textContent);
+                if (current > 1) qtyDisplay.textContent = current - 1;
+            });
+
+            // Add to cart AJAX
+            cartBtn.addEventListener('click', () => {
+                const quantity = parseInt(qtyDisplay.textContent);
+                
+                console.log("Send quantity:",quantity)
+                fetch("{% url 'create_cart' %}", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "X-CSRFToken": csrftoken
+                    },
+                    body: JSON.stringify({
+                        product: productId,
+                        quantity: quantity,
+                        price: price
+                    })
+                })
+                .then(res => res.json())
+                .then(data => alert(data.message))
+                .catch(err => {
+                    console.error(err);
+                    alert("Failed to add to cart!");
+                });
             });
         });
     </script>

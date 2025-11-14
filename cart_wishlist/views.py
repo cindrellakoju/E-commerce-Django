@@ -7,24 +7,26 @@ from cart_wishlist.services import verify_cart_item
 import json
 import uuid
 from django.db import IntegrityError,transaction
+from django.shortcuts import render
+from django.contrib.auth.decorators import login_required
+from asgiref.sync import async_to_sync
 # Create your views here.
-@csrf_exempt
-@verify_token
-@role_required('customer')
+@login_required(login_url="users:login")
+# @role_required('customer')
 def create_cart(request):
     if request.method != "POST":
         return JsonResponse({"error":"Invalid method"},status = 405)
     
     try:
         data = json.loads(request.body)
-        user_id = request.user_id
+        user_id = request.user.id
         product_id = data.get('product')
         quantity = int(data.get('quantity', 1))
         price = float(data.get('price', 0))
     except (json.JSONDecodeError, ValueError, TypeError):
         return JsonResponse({"error": "Invalid or missing data"}, status=400)
     
-    user = verify_user(user_id=user_id)
+    user = async_to_sync(verify_user)(user_id=user_id)
     if isinstance(user, JsonResponse):
         return user
     product = verify_product(product_id=product_id)
@@ -36,11 +38,11 @@ def create_cart(request):
 
         if cart_item:
             # Already exists → increase quantity by 1
-            cart_item.quantity += 1
+            cart_item.quantity += quantity
             cart_item.price = price * cart_item.quantity
             cart_item.save()
             return JsonResponse({
-                'message': 'Product already in cart — quantity increased by 1',
+                'message': f'Product already in cart — quantity increased by {quantity}',
                 'cart_id': cart_item.id,
                 'new_quantity': cart_item.quantity,
                 'total_price': cart_item.price
@@ -60,41 +62,40 @@ def create_cart(request):
                 'total_price': cart_item.price
             }, status=201)
 
-@csrf_exempt
-@verify_token
-@role_required('customer')
+@login_required
+# @role_required('customer')
 def edit_cart(request,cart_id):
     if request.method not in ["PUT","POST"]:
         return JsonResponse({"error":"Invalid method"},status = 405)
     try:
         data = json.loads(request.body)
-        user_id = request.user_id
-        quantity = data.get('quantity')
-        price = data.get('price')
+        user_id = request.user.id
+        quantity = int(data.get('quantity'))
+        price = float(data.get('price'))
     except json.JSONDecodeError:
         return JsonResponse({"error":"Failed to load json"},status = 400)
     
     cart_item = verify_cart_item(cart_id=cart_id)
     if isinstance(cart_item, JsonResponse):
         return cart_item
-    if cart_item.user.id != uuid.UUID(user_id):
+    if cart_item.user.id != user_id:
         return JsonResponse({'error': 'You are not allowed to edit this cart'}, status=403)
     
     if quantity is None or price is None:
         return JsonResponse({'error': 'Both quantity and price are required'}, status=400)
 
     cart_item.quantity = quantity
-    cart_item.price = price * quantity
+    cart_item.price = price
     cart_item.save()
     return JsonResponse({'message':'Cart Updated successfully'})
 
-@csrf_exempt
-@verify_token
+@login_required(login_url="users:login")
 def retrieve_cart(request):
     if request.method != "GET":
         return JsonResponse({"error":"Invalid method"},status = 405)
-    user_id = request.user_id
-    user = verify_user(user_id=user_id)
+    
+    user_id = request.user.id
+    user = async_to_sync(verify_user)(user_id=user_id)
     if isinstance(user, JsonResponse):
         return user
     try:
@@ -103,6 +104,8 @@ def retrieve_cart(request):
         return JsonResponse({"error": "Cart item not found"}, status=404)
     
     data = []
+    total_product_price = 0
+    delivery_charge = 150
     for cart in cart_item:
         data.append({
             'id' : str(cart.id),
@@ -110,25 +113,32 @@ def retrieve_cart(request):
             'quantity' : cart.quantity,
             'price': cart.price
         })
+        total_product_price += cart.price
 
-    return JsonResponse({'cart item':data})
+    total_price = total_product_price + delivery_charge
+    context = {'cart_items': data,
+               'total_product_price': total_product_price,
+                'delivery': delivery_charge,
+                'total_price': total_price
+            }
+    return render(request, "ecommerce/cart_page.html", context=context)
+    # return JsonResponse({'cart item':data})
 
-@csrf_exempt
-@verify_token
-@role_required('customer')
+@login_required(login_url="users:login")
+# @role_required('customer')
 def delete_cart(request,cart_id):
     if request.method != "DELETE":
         return JsonResponse({"error":"Invalid method"},status = 405)
     
-    user_id = request.user_id    
+    user_id = request.user.id 
     cart_item = verify_cart_item(cart_id=cart_id)
     if isinstance(cart_item, JsonResponse):
         return cart_item
-    if cart_item.user.id != uuid.UUID(user_id):
+    if cart_item.user.id != user_id:
         return JsonResponse({'error': 'You are not allowed to delete this cart'}, status=403)
 
     cart_item.delete()
-    return JsonResponse({'error':'Cart Item deleted successfully'})
+    return JsonResponse({'message':'Cart Item deleted successfully'})
 
 @csrf_exempt
 @verify_token
