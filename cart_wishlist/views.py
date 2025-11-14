@@ -1,11 +1,9 @@
 from cart_wishlist.models import Cart, Wishlist
 from django.http import JsonResponse
-from users.services import verify_user,verify_token,role_required
-from django.views.decorators.csrf  import csrf_exempt
+from users.services import verify_user,role_required
 from products.services import verify_product
 from cart_wishlist.services import verify_cart_item
 import json
-import uuid
 from django.db import IntegrityError,transaction
 from django.shortcuts import render
 from django.contrib.auth.decorators import login_required

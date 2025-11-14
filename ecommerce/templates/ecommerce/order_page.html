@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Order</title>
+    <style>
+        /* Reset some default browser styles */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        /* Body styling */
+        body {
+            background-color: #f9f9f9;
+            padding: 20px;
+        }
+
+        /* Order container */
+        .orderitem {
+            background-color: #fff;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .orderitem:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 6px 12px rgba(0,0,0,0.15);
+        }
+
+        /* Order information */
+        .orderitem p {
+            font-size: 16px;
+            color: #555;
+            margin-bottom: 6px;
+        }
+
+        .orderitem p:last-of-type {
+            margin-bottom: 12px;
+        }
+
+        /* Items container */
+        .items {
+            background-color: #f1f1f1;
+            padding: 15px;
+            border-radius: 6px;
+            margin-top: 10px;
+        }
+
+        /* Product card */
+        .product {
+            background-color: #fff;
+            padding: 15px;
+            border-radius: 6px;
+            border: 1px solid #ddd;
+            margin-bottom: 10px;
+        }
+
+        .product h1 {
+            font-size: 18px;
+            color: #333;
+            margin-bottom: 8px;
+        }
+
+        .product p {
+            font-size: 14px;
+            color: #666;
+            margin-bottom: 4px;
+        }
+
+        /* Responsive adjustments */
+        @media (max-width: 768px) {
+            .orderitem {
+                padding: 15px;
+            }
+
+            .product h1 {
+                font-size: 16px;
+            }
+
+            .product p {
+                font-size: 13px;
+            }
+        }
+
+    </style>
+</head>
+<body>
+    {% if order %}
+        {% for item in order %}
+            <div class="orderitem" data-id="{{ item.id }}">
+                <p>Total Amount: {{ item.total_amount }}</p>
+                <p>Payment Method: {{ item.payment_method }}</p>
+                <p>Payment Status: {{ item.payment_status }}</p>
+                <p>Delivery Charge: {{item.delivery_charge }}</p>
+                <p>Order Status : {{ item.order_status }}</p>
+                {% for order_item in item.items %}
+                    <div class="items" data-id="{{ order_item.id }}">
+                        <div class="product" data-id="{{ order_item.product_id }}">
+                            <h1>Name: {{ order_item.product_name }}</h1>
+                            <p>Quantity: {{ order_item.quantity }}</p>
+                            <p>Price: {{ order_item.price }}</p>
+                            <p>Subtotal: {{ order_item.Subtotal }}</p>
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        {% endfor %}
+    {% else %}
+        <p>No Order Found</p>
+    {% endif %}
+</body>
+</html>

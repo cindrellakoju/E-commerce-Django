@@ -7,16 +7,21 @@ from users.services import verify_user,verify_token,role_required
 import uuid
 from django.views.decorators.csrf  import csrf_exempt
 from decimal import Decimal
+from django.shortcuts import render
+from django.contrib.auth.decorators import login_required
+from asgiref.sync import async_to_sync
+from django_redis import get_redis_connection
 
+r = get_redis_connection("default")
 # Create your views here.
 @csrf_exempt
-@verify_token
-@role_required('customer') 
+@login_required
+# @role_required('customer') 
 def create_order(request):
     if request.method != "POST":
         return JsonResponse({'error':'Invalid method'},status = 405)
     
-    user_id = request.user_id
+    user_id = request.user.id
     try:
         data = json.loads(request.body)
     except json.JSONDecodeError:
@@ -34,7 +39,7 @@ def create_order(request):
     payment_status = data.get('payment_status', 'pending')
     order_status = data.get('order_status', 'pending')
 
-    user = verify_user(user_id=user_id)
+    user = async_to_sync(verify_user)(user_id=user_id)
     order = Orders.objects.create(
         user = user,
         total_amount = total_amount,
@@ -102,14 +107,13 @@ def edit_order(request, order_id):
         'payment_status': order.payment_status,
     }, status=200)
     
-@csrf_exempt
-@verify_token
+@login_required(login_url="users:login")
 def retrieve_order(request):
     if request.method != "GET":
         return JsonResponse({'error':'Invalid method'},status = 405)
     
-    user_id = request.user_id
-    user = verify_user(user_id=user_id)
+    user_id = request.user.id
+    user = async_to_sync(verify_user)(user_id=user_id)
     try:
         orders = Orders.objects.filter(user=user).prefetch_related('order_items__product')
     except Orders.DoesNotExist:
@@ -138,7 +142,11 @@ def retrieve_order(request):
             "order_status": order.order_status,
             "items": items_data,
         })
-    return JsonResponse({'Order':data})
+    context = {
+        "order" : data
+    }
+    return render(request,"ecommerce/order_page.html",context=context)
+    # return JsonResponse({'Order':data})
 
 @csrf_exempt
 @verify_token
@@ -160,9 +168,8 @@ def delete_order(request,order_id):
     return JsonResponse({'message':'Order deleted successfully'})
 
 
-@csrf_exempt
-@verify_token
-@role_required('customer') 
+@login_required
+# @role_required('customer') 
 def insert_order_item(request):
     if request.method != "POST":
         return JsonResponse({'error':'Invalid method'},status = 405)
@@ -210,3 +217,66 @@ def insert_order_item(request):
         }
     }, status=201)
 
+
+def store_checkout(request):
+    if request.method != "POST":
+        return JsonResponse({"error":"Invalid Method"},status = 405)
+    
+    try:
+        data = json.loads(request.body)
+    except json.JSONDecodeError:
+        return JsonResponse({'error':'Failed to decode JSON'},status = 400)
+    
+    user_id = request.user.id
+    checkout_items = data.get('checkout_items', [])
+    
+    # Serialize checkout_item as redis hashes only store strings
+    checkout_items_serialized = json.dumps(checkout_items)
+
+    # 3. Store in Redis hash
+    redis_key = f"user_checkout:{user_id}"
+    r.hset(redis_key, mapping={
+        "user_id": str(user_id),
+        "checkout_items": checkout_items_serialized
+    })
+
+    # Set TTL (expire in 15 minute)
+    r.expire(redis_key, 900)
+
+    return JsonResponse({"redirect": "/order/checkout"})
+
+def checkout_view(request):
+    user_id = request.user.id
+    redis_key = f"user_checkout:{user_id}"
+
+    # Get the checkout_items from Redis
+    checkout_items_serialized = r.hget(redis_key, "checkout_items")
+    if checkout_items_serialized:
+        checkout_items = json.loads(checkout_items_serialized)
+    else:
+        checkout_items = []
+
+    # Calculate total: sum of price * quantity for each item
+    total_amount = sum(item['price'] * item['quantity'] for item in checkout_items)
+    delivery_charge = 150
+
+    context = {
+        "checkout_items": checkout_items,
+        "total_product_amount": total_amount,
+        "delivery_charge": delivery_charge,
+        "total_amount": total_amount + delivery_charge
+    }
+
+    return render(request, "ecommerce/checkout_page.html", context)
+# def store_checkout(request):
+#     if request.method != "POST":
+#         return JsonResponse({"error": "Invalid Method"}, status=405)
+
+#     user_id = request.user.id
+    
+#     data = json.loads(request.body)
+#     checkout_items = data.get("checkout_items", [])
+
+#     request.session["checkout_items"] = checkout_items  # <-- store in session
+
+#     return JsonResponse({"redirect": "/order/checkout"})

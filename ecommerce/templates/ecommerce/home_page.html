@@ -143,8 +143,8 @@
             {% for product in products %}
                 <div class="product" data-id="{{ product.id }}" data-price="{{ product.price }}">
                     <img src="https://via.placeholder.com/250x200.png?text={{ product.name|urlencode }}" alt="{{ product.name }}">
-                    <h1>{{ product.name }}</h1>
-                    <p>Price: {{ product.price }}</p>
+                    <h1 class="name">{{ product.name }}</h1>
+                    <p class="price">Price: {{ product.price }}</p>
                     <p>Stock: {{ product.stock }}</p>
 
                     <div class="stock">
@@ -154,7 +154,7 @@
                     </div>
                     <button class="cart-btn">Cart</button>
                     <button class="wishlist-btn">Wishlist</button>
-                    <button class="buy-btn">Buy Now</button>
+                    <button class="checkout-btn">Checkout</button>
                 </div>
             {% endfor %}
 
@@ -212,6 +212,8 @@
             const qtyDisplay = product.querySelector('.quantity');
             const cartBtn = product.querySelector('.cart-btn');
             const wishlistBtn = product.querySelector('.wishlist-btn');
+            const checkoutBtn = product.querySelector('.checkout-btn')
+            const name = product.querySelector(".name")
             const productId = product.dataset.id;
             const price = parseFloat(product.dataset.price);
 
@@ -252,7 +254,6 @@
             });
 
             wishlistBtn.addEventListener('click', () => {
-                console.log("Clicked")
                 fetch("{% url 'create_wishlist' %}",{
                     method : "POST",
                     headers: {
@@ -268,6 +269,36 @@
                 .catch(err => {
                     console.error(err)
                     alert("Failed to add to Wishlist")
+                })
+            })
+
+            checkoutBtn.addEventListener('click',() => {
+                const quantity = parseInt(qtyDisplay.textContent);
+                checkout_items = [{
+                    "product_id" : productId,
+                    "product_name" : name.textContent,
+                    "price" : price,
+                    "quantity" : quantity
+                }]
+                fetch("{% url 'store_session' %}",{
+                    method : "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "X-CSRFToken": csrftoken
+                    },
+                    body: JSON.stringify({
+                        "checkout_items" : checkout_items
+                    })
+                })
+                .then(res => res.json())   // <-- expect JSON
+                .then(data => {
+                    if (data.redirect) {
+                        window.location.href = data.redirect;  // <-- proper redirect
+                    }
+                })
+                .catch(err => {
+                    console.error(err)
+                    alert("Failed to render checkout")
                 })
             })
         });

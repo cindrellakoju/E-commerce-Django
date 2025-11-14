@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Checkout</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            margin: 0;
+            padding: 20px;
+        }
+
+        .checkout-item {
+            background-color: #fff;
+            padding: 15px;
+            margin-bottom: 10px;
+            border-radius: 5px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+
+        .checkout-item:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+            transition: 0.2s;
+        }
+
+        h1 {
+            font-size: 18px;
+            margin: 0 0 5px 0;
+        }
+
+        p {
+            margin: 5px 0;
+        }
+
+        .total-info, .payment-methods {
+            background-color: #fff;
+            padding: 15px;
+            border-radius: 5px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+
+        .payment-methods label {
+            display: block;
+            margin-bottom: 10px;
+            cursor: pointer;
+        }
+
+        button {
+            background-color: #28a745;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            font-size: 16px;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        button:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+        }
+
+        button:hover:not(:disabled) {
+            background-color: #218838;
+        }
+
+        #error-message {
+            color: red;
+            margin-bottom: 10px;
+        }
+    </style>
+</head>
+<body>
+    {% if checkout_items %}
+        {% for item in checkout_items %}
+            <div class="checkout-item" data-id="{{ item.product_id }}">
+                <h1>Product Name: {{ item.product_name }}</h1>
+                <p class="price">Price: {{ item.price }}</p>
+                <p class="quantity">Quantity: {{ item.quantity }}</p>
+            </div>
+        {% endfor %}
+
+        <div class="total-info">
+            <p>Total Product Price: {{ total_product_amount }}</p>
+            <p>Delivery Charge: <strong id="delivery-charge">{{ delivery_charge }}</strong></p>
+            <p>Total Amount: <strong id="total-amount">{{ total_amount }}</strong></p>
+        </div>
+
+        <div class="payment-methods">
+            <h2>Select Payment Method:</h2>
+            <label>
+                <input type="radio" name="payment_method" value="khalti"> Khalti
+            </label>
+            <label>
+                <input type="radio" name="payment_method" value="esewa"> eSewa
+            </label>
+            <label>
+                <input type="radio" name="payment_method" value="cod"> Cash on Delivery (COD)
+            </label>
+        </div>
+
+        <div id="error-message"></div>
+
+        <button id="buyBtn" disabled>Buy Now</button>
+    {% endif %}
+
+    <script>
+        // CSRF token helper for Django AJAX
+        function getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let cookie of cookies) {
+                    cookie = cookie.trim();
+                    if (cookie.startsWith(name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+        const csrftoken = getCookie('csrftoken');
+
+        const paymentRadios = document.querySelectorAll('input[name="payment_method"]');
+        const buyBtn = document.getElementById('buyBtn');
+        const deliveryCharge = document.getElementById('delivery-charge');
+        const totalAmount = document.getElementById('total-amount');
+        const checkoutItems = document.querySelectorAll('.checkout-item');
+        const errorMessage = document.getElementById('error-message');
+
+        // Parse amounts safely
+        const totalAmountValue = parseFloat(totalAmount.textContent.replace(/[^0-9.]/g, '').replace(/,/g, ''));
+        const deliveryChargeValue = parseFloat(deliveryCharge.textContent.replace(/[^0-9.]/g, '').replace(/,/g, ''));
+
+        let selectedPayment = null;
+
+        // Enable Buy button when payment method is selected
+        paymentRadios.forEach(radio => {
+            radio.addEventListener('change', () => {
+                selectedPayment = radio.value;
+                buyBtn.disabled = false;
+                errorMessage.textContent = '';
+                console.log("Selected Payment Method:", selectedPayment);
+            });
+        });
+
+        let orderId;
+
+        buyBtn.addEventListener('click', () => {
+            buyBtn.disabled = true; // prevent multiple clicks
+            errorMessage.textContent = '';
+
+            // Step 1: Create order
+            fetch("{% url 'create_order' %}", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "X-CSRFToken": csrftoken
+                },
+                body: JSON.stringify({
+                    total_amount: totalAmountValue,
+                    delivery_charge: deliveryChargeValue,
+                    payment_method: selectedPayment
+                })
+            })
+            .then(res => res.json())
+            .then(data => {
+                console.log(data)
+                if (!data.order_id) throw new Error(data.message || "Failed to create order");
+                orderId = data.order_id;
+                console.log("Order ID:", orderId);
+
+                // Step 2: Add items to order
+                const itemPromises = Array.from(checkoutItems).map(item => {
+                    const price = parseFloat(item.querySelector('.price').textContent.replace(/[^0-9.]/g, ''));
+                    const quantity = parseInt(item.querySelector('.quantity').textContent.replace(/\D/g, ''), 10);
+                    const product_id = item.dataset.id;
+
+                    return fetch("{% url 'insert_order_item' %}", {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "application/json",
+                            "X-CSRFToken": csrftoken
+                        },
+                        body: JSON.stringify({
+                            order: orderId,
+                            product: product_id,
+                            quantity: quantity,
+                            price: price
+                        })
+                    })
+                    .then(res => res.json());
+                });
+
+                return Promise.all(itemPromises);
+            })
+            .then(results => {
+                console.log("All items added:", results);
+                if (selectedPayment === "khalti") {
+                    return fetch(`/payments/khalti/${orderId}`, {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "application/json",
+                            "X-CSRFToken": csrftoken
+                        }
+                    })
+                    .then(res => res.json())
+                    .then(data => {
+                        if (data.payment_url) {
+                            window.location.href = data.payment_url;
+                        } else {
+                            throw new Error("Failed to initiate Khalti payment");
+                        }
+                    });
+                } else if (selectedPayment === "esewa") {
+                    alert("NED to make")
+                    // window.location.href = `/payments/esewa/${orderId}/`;
+                } else if (selectedPayment === "cod") {
+                    alert("Order placed successfully! Please pay on delivery.");
+                    window.location.reload();
+                }
+            })
+            .catch(err => {
+                console.error(err);
+                errorMessage.textContent = err.message || "Something went wrong!";
+                buyBtn.disabled = false;
+            });
+        });
+    </script>
+</body>
+</html>

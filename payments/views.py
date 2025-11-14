@@ -1,15 +1,18 @@
+
 # from django.shortcuts import render
 from pathlib import Path
 from dotenv import load_dotenv
-from users.services import verify_user,verify_token
+from users.services import verify_user
 from orders.services import verify_order
-from orders.models import OrderItem
+from orders.models import OrderItem,Orders
 from django.http import JsonResponse
 import os
 import requests
 from django.views.decorators.csrf import csrf_exempt
 from payments.models import Payment
 import json
+from django.contrib.auth.decorators import login_required
+from asgiref.sync import async_to_sync
 # Load .env file
 BASE_DIR = Path(__file__).resolve().parent.parent
 load_dotenv(BASE_DIR / '.env')
@@ -32,16 +35,16 @@ def map_khalti_status(khalti_status):
     else:
         return "pending"
 
-@csrf_exempt
-@verify_token
+
+@login_required(login_url="users:login")
 def khalti_payment(request, order_id):
     if request.method != "POST":
         return JsonResponse({'error': "Invalid Method"}, status=405)
 
-    user_id = request.user_id
+    user_id = request.user.id
 
 
-    user = verify_user(user_id=user_id)
+    user = async_to_sync(verify_user)(user_id=user_id)
     if isinstance(user, JsonResponse):
         return user
     order = verify_order(order_id=order_id)
@@ -101,7 +104,7 @@ def khalti_payment(request, order_id):
 
 
 @csrf_exempt
-@verify_token
+@login_required(login_url="users:login")
 def verify_khalti_payment(request, order_id):
     if request.method != "GET":
         return JsonResponse({'error': "Invalid Method"}, status=405)
@@ -147,6 +150,10 @@ def verify_khalti_payment(request, order_id):
         refund_status="not_requested"
     )
 
+    order = Orders.objects.get(id=order_id)
+    order.payment_status = 'paid'
+    order.save()
+
     return JsonResponse({
         "message": "Payment verified successfully",
         "payment": {
@@ -159,7 +166,7 @@ def verify_khalti_payment(request, order_id):
     })
 
 @csrf_exempt
-@verify_token
+@login_required(login_url="users:login")
 def refund_khalti_payment(request,order_id):
     if request.method != "POST":
         return JsonResponse({'error': "Invalid Method"}, status=405)

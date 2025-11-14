@@ -16,6 +16,7 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path,include
+from django.http import HttpResponse
 
 urlpatterns = [
     path('users/',include('users.urls')),
@@ -25,5 +26,6 @@ urlpatterns = [
     path('order/',include('orders.urls')),
     path('payments/',include('payments.urls')),
     path('chat/', include('chat.urls')),
-    path('videocall/',include('videocall.urls'))
+    path('videocall/',include('videocall.urls')),
+    path('.well-known/appspecific/com.chrome.devtools.json', lambda r: HttpResponse(status=204)),
 ]
