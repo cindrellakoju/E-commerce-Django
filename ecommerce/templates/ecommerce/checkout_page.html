@@ -180,8 +180,9 @@
                     const price = parseFloat(item.querySelector('.price').textContent.replace(/[^0-9.]/g, ''));
                     const quantity = parseInt(item.querySelector('.quantity').textContent.replace(/\D/g, ''), 10);
                     const product_id = item.dataset.id;
+                    const insertOrderItemUrl = "{% url 'insert_order_item' %}"; 
 
-                    return fetch("{% url 'insert_order_item' %}", {
+                    return fetch(insertOrderItemUrl, {
                         method: "POST",
                         headers: {
                             "Content-Type": "application/json",
@@ -211,18 +212,28 @@
                     })
                     .then(res => res.json())
                     .then(data => {
-                        if (data.payment_url) {
-                            window.location.href = data.payment_url;
-                        } else {
-                            throw new Error("Failed to initiate Khalti payment");
-                        }
+                        if (!data.payment_url) throw new Error("Failed to initiate Khalti payment");
+
+                        // Open Khalti payment in a new window
+                        const khaltiWindow = window.open(data.payment_url, "_blank", "width=500,height=700");
+
+                        // Polling to check if the Khalti window is closed
+                        const poll = setInterval(() => {
+                            if (khaltiWindow.closed) {
+                                clearInterval(poll);
+
+                                // After Khalti is done, redirect to home page
+                                alert("Payment completed successfully!");
+                                window.location.href = '/products';
+                            }
+                        }, 500);
                     });
                 } else if (selectedPayment === "esewa") {
                     alert("NED to make")
                     // window.location.href = `/payments/esewa/${orderId}/`;
                 } else if (selectedPayment === "cod") {
                     alert("Order placed successfully! Please pay on delivery.");
-                    window.location.reload();
+                    window.location.href = '/products';
                 }
             })
             .catch(err => {

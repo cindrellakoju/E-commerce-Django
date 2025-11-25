@@ -2,6 +2,7 @@ from products.services import verify_product
 from django.http import JsonResponse
 import json
 from orders.models import Orders,OrderItem
+from cart_wishlist.models import Cart
 from orders.services import verify_order
 from users.services import verify_user,verify_token,role_required
 import uuid
@@ -204,6 +205,13 @@ def insert_order_item(request):
         price = price,
         subtotal = subtotal
     )
+
+# --- Remove from cart if exists ---
+    try:
+        cart_item = Cart.objects.get(user=request.user, product=product)
+        cart_item.delete()
+    except Cart.DoesNotExist:
+        pass
 
     return JsonResponse({
         'message': 'Order item created successfully',

@@ -106,7 +106,7 @@ def retrieve_cart(request):
     delivery_charge = 150
     for cart in cart_item:
         data.append({
-            'id' : str(cart.id),
+            'id' : str(cart.product_id),
             'product' : cart.product.name,
             'quantity' : cart.quantity,
             'price': cart.price
