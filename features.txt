@@ -1,0 +1,42 @@
+customer:
+    Retrieve all product
+    Cart 
+    Wishlist 
+    Order Management
+    Oder Tracking
+    Review and Rating
+    Notifications(Email)
+    chat with seller and driver
+    payment
+
+
+seller:
+    CRUD of seller add product
+    Set Discount price
+    create product category( in list only after admin approve )
+    view all order
+    mark order as (packing, ready for pack )
+    assign delivery
+    View low-stock alerts
+    View daily/weekly/monthly sales
+    View total earnings
+    withdraw product
+    chat with driver and customer
+    Add bank details for payment settlement
+
+Driver:
+    Add vehicle info 
+    View assigned deliveries
+    Accept/Reject delivery job (optional)
+    View customer address on map
+    View seller pickup location
+    Mark order as:
+        Picked Up from Seller
+        On the Way
+        Delivered
+    OTP verification to confirm delivery
+    Call or message customers
+    Call or message seller
+    View earnings
+    Daily/weekly payout
+    GPS location sharing
