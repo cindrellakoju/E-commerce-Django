@@ -19,15 +19,22 @@ def pagination(page_number,page_size,products):
     
     data = []
     for product in paginate_product:
+    # Get main image(s)
+        main_image_url = None
+        main_images = product.images.filter(is_main=True)  # filter in DB
+        if main_images.exists():
+            main_image_url = main_images.first().public_url  # take the first one
+
         data.append({
-            'id':str(product.id),
-            'seller' : str(product.seller),
-            'category' : str(product.category),
-            'name':product.name,
-            'slug':product.slug,
-            'description':product.description,
-            'price':product.price,
-            'stock':product.stock
+            'id': str(product.id),
+            'seller': str(product.seller),
+            'category': str(product.category),
+            'name': product.name,
+            'slug': product.slug,
+            'description': product.description,
+            'price': product.price,
+            'stock': product.stock,
+            'main_image': main_image_url
         })
     # return JsonResponse({
     #     'page': paginate_product.number,

@@ -2,6 +2,8 @@ from django.db import models
 from users.models import BaseModel,Users
 from django.utils.text import slugify
 from django.core.validators import MinValueValidator,MaxValueValidator
+from document.storage_backends import PublicMediaStorage
+from document.utils import public_upload_to, generate_presigned_url
 # Create your models here.
 class ProductCategory(BaseModel):
     name = models.CharField(max_length=100)
@@ -41,11 +43,22 @@ class Products(BaseModel):
 
 class ProductImage(BaseModel):
     product = models.ForeignKey(Products, on_delete=models.CASCADE, related_name='images')
-    image_url = models.URLField()
+    image_url = models.ImageField(
+        storage= PublicMediaStorage(),
+        upload_to= public_upload_to,
+        null=True,
+        blank=True
+    )
     is_main = models.BooleanField(default=False)
 
     def __str__(self):
         return f"{self.product.name} Image"
+    
+    @property
+    def public_url(self):
+        if self.image_url:
+            return generate_presigned_url(self.image_url.name,'public')
+        return ''
 
 class ProductReview(BaseModel):
     reviewer = models.ForeignKey(Users, on_delete=models.CASCADE, related_name="reviews")

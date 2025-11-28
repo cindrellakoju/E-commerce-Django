@@ -9,9 +9,8 @@ from users.models import Users
 from channels.db import database_sync_to_async
 
 BASE_DIR = Path(__file__).resolve().parent.parent
-print(BASE_DIR)
 load_dotenv(BASE_DIR/'.env')
-secret_key = os.getenv("SECRET_KEY")
+secret_key = os.getenv("ENCRYPT_TOKEN_SECRET_KEY")
 algorithm = os.getenv("ALGORITHM", "HS256")  # default to HS256 if not in .env
 
 def generate_jwt(userid,email,role):

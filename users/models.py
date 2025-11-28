@@ -1,6 +1,8 @@
 from django.db import models
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, PermissionsMixin
 import uuid
+from document.storage_backends import PrivateMediaStorage
+from document.utils import private_profile_upload_to
 # Create your models here.
 class UsersManager(BaseUserManager):
     def create_user(self, username, email, password=None, **extra_fields):
@@ -45,6 +47,12 @@ class Users(AbstractBaseUser, PermissionsMixin, BaseModel):
     secondary_contact_number=models.CharField(max_length=30,null=False,default="")
     phone = models.CharField(max_length=30,null=False)
     roles = models.CharField(choices=UserRoles.choices,default=UserRoles.CUSTOMER)
+    profile_image = models.ImageField(
+        storage=PrivateMediaStorage(),
+        upload_to=private_profile_upload_to,
+        null=True,
+        blank=True
+    )
     is_staff = models.BooleanField(default=False)
     is_active = models.BooleanField(default=True)
 

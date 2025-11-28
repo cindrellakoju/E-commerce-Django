@@ -115,10 +115,10 @@ from django.shortcuts import render, redirect
 from django.contrib import messages
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required
-import json
 from django.http import JsonResponse
 from users.models import Users
 from django.contrib.auth.hashers import make_password
+from document.utils import generate_presigned_url
 
 def login_view(request):
     if request.method == "POST":
@@ -142,47 +142,57 @@ def logout_view(request):
     logout(request)  # clears the session
     return redirect('users/login/')
 
-
-@login_required(login_url='users:login')  # redirect if not logged in
+@login_required(login_url='users:login')
 def profile(request):
-    user = request.user  # your custom Users instance
+    user = request.user
+    profile_image_url = None
+
+    if user.profile_image:
+        # Use exactly the stored name; storage location is already handled
+        profile_image_url = generate_presigned_url(user.profile_image.name)
+ 
+    print("Profile Image URL:",profile_image_url)
     return render(request, 'ecommerce/user_profile.html', {
         "fullname": user.fullname,
         "username": user.username,
         "email": user.email,
         "phone": user.phone,
         "address": user.address,
-        "roles": user.roles
+        "roles": user.roles,
+        "profile_image": profile_image_url
     })
+
 
 def signup(request):
     if request.method == "POST":
-        try:
-            data= json.loads(request.body)
-            username = data.get("username")
-            email = data.get("email")
-            password = data.get('password')
-            phone = data.get('phone')
-            roles = data.get('roles')
-        except ValueError:
-            return JsonResponse({"error":"Invalid JSON"},status=400)
-        
+        username = request.POST.get("username")
+        email = request.POST.get("email")
+        password = request.POST.get("password")
+        phone = request.POST.get("phone")
+        roles = request.POST.get("roles")
+        profile_image = request.FILES.get("profile_image")  # file upload
+
         if not username or not email or not password or not phone or not roles:
-            return JsonResponse({"error" : "All fields are required"},status = 400)
-        
+            return JsonResponse({"error": "All fields are required"}, status=400)
+
         if Users.objects.filter(username=username).exists():
-            return JsonResponse({"error":"Username already exist"},status = 400)
-        
+            return JsonResponse({"error": "Username already exists"}, status=400)
         if Users.objects.filter(email=email).exists():
-            return JsonResponse({"error":"Email already exist"},status = 400)
-        
+            return JsonResponse({"error": "Email already exists"}, status=400)
+
         user = Users.objects.create(
-            username = username,
-            email = email,
-            password = make_password(password),
-            phone = phone,
-            roles = roles
+            username=username,
+            email=email,
+            password=make_password(password),
+            phone=phone,
+            roles=roles,
+            profile_image=profile_image
         )
 
-        return JsonResponse({"message":"User created successfully","username" : user.username})
-    return JsonResponse({"error":"Failed to create user"},status = 400)
+        return JsonResponse({
+            "message": "User created successfully",
+            "username": user.username,
+        })
+
+    # GET request → render signup page
+    return render(request, "ecommerce/signup_page.html")

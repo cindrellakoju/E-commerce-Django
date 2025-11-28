@@ -11,6 +11,7 @@ from products.services import verify_product
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import render
 from django.http import HttpResponseNotAllowed
+from asgiref.sync import async_to_sync
 # Create your views here.
 @csrf_exempt
 @verify_token
@@ -119,22 +120,23 @@ def delete_category(request,slug):
         category.delete()
         return JsonResponse({"message":f"Category of slog {slug} deleted successfully"})
     
-@csrf_exempt
-@verify_token
-@role_required('admin','seller')   
+# @csrf_exempt
+# @verify_token
+# @role_required('admin','seller')   
+@login_required(login_url='users:login')
 def create_product(request):
     pass
     if request.method == "POST":
         try:
-            user_id = request.user_id
-            data = json.loads(request.body)
+            data = json.loads(request.POST.get('data', '{}')) 
+            user_id = request.user.id
             category_id = data.get('category')
             name = data.get('name')
             description = data.get('description')
             price = data.get('price')
             stock = data.get('stock')
 
-            seller = verify_user(user_id=user_id)
+            seller = async_to_sync(verify_user)(user_id=user_id)
             if isinstance(seller, JsonResponse):
                 return seller
             try:
@@ -154,8 +156,21 @@ def create_product(request):
             stock = stock
         )
 
+        # Handle multiple images
+        images = request.FILES.getlist('images')  # 'images' is the key for uploaded files
+        for idx, img in enumerate(images):
+            ProductImage.objects.create(
+                product=product,
+                image_url=img,
+                is_main=(idx==0)  # make the first image the main one
+            )
         return JsonResponse({'message':'New Product added successfully','product_id': str(product.id)})
     return JsonResponse({'error':"Invalid request method"},status = 405)
+
+@login_required(login_url='users:login')
+def create_product_page(request):
+    categories = ProductCategory.objects.all()
+    return render(request, 'ecommerce/create_product.html', {'categories': categories})
 
 @csrf_exempt
 @verify_token
@@ -208,7 +223,6 @@ def retrieve_product(request):
         page_number = int(request.GET.get('page', 1))
         page_size = int(request.GET.get('size', 5))
 
-        
         pagination_data = pagination(page_number=page_number, page_size=page_size, products=products)
         page_number = pagination_data['page']
         total_pages = pagination_data['total_pages']

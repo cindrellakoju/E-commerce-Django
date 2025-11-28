@@ -44,6 +44,9 @@ INSTALLED_APPS = [
     'channels',
     # ssl for https
     'sslserver',
+    # s3
+    'storages',
+    # apps
     'users',
     'products',
     'cart_wishlist',
@@ -157,3 +160,11 @@ CACHES = {
         }
     }
 }
+
+# Use S3 for storing uploaded files (images)
+DEFAULT_FILE_STORAGE = os.getenv('DEFAULT_FILE_STORAGE')
+
+AWS_BUCKET_NAME= os.getenv('AWS_BUCKET_NAME')
+AWS_REGION=os.getenv('AWS_REGION')
+AWS_ACCESS_KEY_ID= os.getenv('AWS_ACCESS_KEY_ID')
+AWS_SECRET_ACCESS_KEY= os.getenv('AWS_SECRET_ACCESS_KEY')

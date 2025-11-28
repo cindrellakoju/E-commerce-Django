@@ -1,19 +1,56 @@
+{% load static %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>User Profile</title>
+    <style>
+        .profile-container {
+            max-width: 400px;
+            margin: 50px auto;
+            padding: 20px;
+            border: 1px solid #ccc;
+            border-radius: 10px;
+            text-align: center;
+            font-family: Arial, sans-serif;
+        }
+        .profile-container img {
+            width: 150px;
+            height: 150px;
+            border-radius: 50%;
+            object-fit: cover;
+            margin-bottom: 20px;
+        }
+        .profile-container ul {
+            list-style: none;
+            padding: 0;
+            text-align: left;
+        }
+        .profile-container li {
+            margin-bottom: 10px;
+        }
+    </style>
 </head>
 <body>
-    <h2>User Profile</h2>
-    <ul>
-        <li>Full Name: {{ fullname }}</li>
-        <li>Username: {{ username }}</li>
-        <li>Email: {{ email }}</li>
-        <li>Phone: {{ phone }}</li>
-        <li>Address: {{ address }}</li>
-        <li>Role: {{ roles }}</li>
-    </ul>
+    <div class="profile-container">
+        <h2>User Profile</h2>
+
+        {% if profile_image %}
+            <img src="{{ profile_image }}" alt="Profile Image" width="200">
+        {% else %}
+            <p>No profile image uploaded</p>
+        {% endif %}     
+
+
+        <ul>
+            <li>Full Name: {{ fullname }}</li>
+            <li>Username: {{ username }}</li>
+            <li>Email: {{ email }}</li>
+            <li>Phone: {{ phone }}</li>
+            <li>Address: {{ address }}</li>
+            <li>Role: {{ roles }}</li>
+        </ul>
+    </div>
 </body>
 </html>

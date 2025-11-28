@@ -142,7 +142,7 @@
         {% if products %}
             {% for product in products %}
                 <div class="product" data-id="{{ product.id }}" data-price="{{ product.price }}">
-                    <img src="https://via.placeholder.com/250x200.png?text={{ product.name|urlencode }}" alt="{{ product.name }}">
+                    <img src="{{ product.main_image }}" alt="{{ product.name }}">
                     <h1 class="name">{{ product.name }}</h1>
                     <p class="price">Price: {{ product.price }}</p>
                     <p>Stock: {{ product.stock }}</p>
